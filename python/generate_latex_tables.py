@@ -1,5 +1,7 @@
+#%%
 import pyperclip
 import numpy as np
+import pickle
 from McNemars_test import get_multiple_mcn_p, get_multiple_prediction_matrix, get_mcn_p, get_prediction_matrix
 from Confusion_matrix import get_confusion_matrices, plot_conf_matrices
 from validation.validation_result import ValidationResult
@@ -38,7 +40,7 @@ def get_latex_mcn_model_tables(plot_title, random_preds, model_names):
     return mcnemar_table
 
 
-def get_latex_mcn_spatial_tables(model_names):
+def get_latex_mcn_spatial_tables(model_names, random_preds):
     result_name = "xyz_results"
     plot_titles = ["xy","xz","yz"]
 
@@ -64,8 +66,14 @@ def get_latex_mcn_spatial_tables(model_names):
         if not np.all(labels_ab == labels_xyz): raise ValueError("Oh nooooo")
 
         for model, model_name in enumerate(model_names):
-            n12,n21,n11,n22 = get_prediction_matrix(labels_xyz, preds_xyz[model], preds_ab[model])
-            p_value = get_mcn_p(labels_xyz, preds_xyz[model], preds_ab[model])
+            try:
+                preds1 = preds_xyz[model]
+                preds2 = preds_ab[model]
+            except:
+                preds1 = random_preds["XYZ"]
+                preds2 = random_preds[plot_title.upper()]
+            n12,n21,n11,n22 = get_prediction_matrix(labels_xyz, preds1, preds2)
+            p_value = get_mcn_p(labels_xyz, preds1, preds2)
             p_values[i] = [model, coordinate, p_value, 0, n12,n21,n11,n22]
             i += 1
     
@@ -80,6 +88,7 @@ def get_latex_mcn_spatial_tables(model_names):
     p_values = p_values[mask]
 
 
+    # output
     mcn_coordinate_table = ["\n% McNemar comparing different spatial coordinates\n\n"]
     mcn_coordinate_table.append("\\begin{table}[H] \n\\centering \n\\begin{tabular}{ll|lllll}\n")
     mcn_coordinate_table.append("Model & xyz vs. & $p$-value & $n_{12}$ & $n_{21}$ & $n_{11}$ & $n_{22}$ \\\\")
@@ -96,9 +105,9 @@ def get_latex_mcn_spatial_tables(model_names):
             model_name = "  "
             mcn_coordinate_table.append("\n")
 
-        mcn_coordinate_table.append(f"{model_name} & {plot_titles[coordinate]} & {BH_p_value:.3} & {n12} & {n21} & {n11} & {n22}\\\\ \n")
+        mcn_coordinate_table.append(f"{model_name} & {plot_titles[coordinate]} & {BH_p_value:.3} & {n12} & {n21} & {n11} & {n22}\\\\")
     
-    mcn_coordinate_table.append("\end{tabular} \n")
+    mcn_coordinate_table.append("\n\end{tabular} \n")
     mcn_coordinate_table.append("\label{tab: mcnemar spatial}\n")
     mcn_coordinate_table.append("\caption{McNemar test comparing same model using different spatial coordinates}\n")
     mcn_coordinate_table.append("\end{table}")
@@ -128,7 +137,7 @@ def get_latex_acc_table(plot_titles, random_preds, model_names):
 
         #Accuracies
         accuracies = np.sum(preds == labels, axis = 1) / len(labels)
-        accuracies = np.append(accuracies, np.sum(labels==random_preds)/len(labels))
+        accuracies = np.append(accuracies, np.sum(labels==random_preds[plot_title])/len(labels))
         accuracies_round = [str(np.round(acc*100,1)) + "\\%" for acc in accuracies]
         accuracy_table += f"{plot_title.lower()} & " + " & ".join(accuracies_round) + "\\\\\n"
     
@@ -139,21 +148,26 @@ def get_latex_acc_table(plot_titles, random_preds, model_names):
 
     return accuracy_table
 
-
+#%%
 
 model_names = ["Multi. Reg", "FFNN", "KNN", "Baseline"]
-plot_titles = ["XYZ","XY","XZ","XY"]
+plot_titles = ["XYZ","XY","XZ","YZ"]
+random_preds = {key: np.random.randint(1,17,1600) for key in plot_titles}
+
 
 output = []
 
-output.append(get_latex_mcn_spatial_tables(model_names[:-1]))
+output.append(get_latex_mcn_spatial_tables(model_names, random_preds))
 
 output.append(get_latex_acc_table(plot_titles, random_preds, model_names))
 
 for plot_title in plot_titles:
-    output.append(get_latex_mcn_model_tables(plot_title, random_preds, model_names))
+    output.append(get_latex_mcn_model_tables(plot_title, random_preds[plot_title], model_names))
 
+output = "\n".join(output)
 
-pyperclip.copy("\n".join(output))
+print(output)
+
+# pyperclip.copy("\n".join(output))
 
 
