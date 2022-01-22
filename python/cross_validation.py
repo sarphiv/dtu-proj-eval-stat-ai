@@ -32,11 +32,11 @@ def get_dataset(file_name, spatial_dimensions = (True, True, True)):
     # Where each trajectory is listed as x0, y0, z0, ..., x299, y299, z299
     X = dataset[:, :, :, :, spat_mask].reshape((reduce(np.multiply, dataset.shape[0:3]), -1))
     #One hot encode person
-    X_p_idx = np.tile(np.arange(10).repeat(10), 16)
-    X_p_data = np.zeros((X.shape[0], dataset.shape[1]))
-    X_p_data[np.arange(X.shape[0]), X_p_idx] = 1
+    # X_p_idx = np.tile(np.arange(10).repeat(10), 16)
+    # X_p_data = np.zeros((X.shape[0], dataset.shape[1]))
+    # X_p_data[np.arange(X.shape[0]), X_p_idx] = 1
     #Prepend person feature onto X
-    X = np.hstack((X_p_data, X))
+    # X = np.hstack((X_p_data, X))
 
 
     #One-indexed experiment number labels
@@ -46,10 +46,10 @@ def get_dataset(file_name, spatial_dimensions = (True, True, True)):
     return (X, y)
 
 
-# X, y = get_dataset("./data_numpy.npy", spatial_dimensions=(True, True, True))
+X, y = get_dataset("./data_numpy.npy", spatial_dimensions=(True, True, True))
 # X, y = get_dataset("./data_numpy.npy", spatial_dimensions=(True, True, False))
 # X, y = get_dataset("./data_numpy.npy", spatial_dimensions=(True, False, True))
-X, y = get_dataset("./data_numpy.npy", spatial_dimensions=(False, True, True))
+# X, y = get_dataset("./data_numpy.npy", spatial_dimensions=(False, True, True))
 
 
 #Define loss function
@@ -57,16 +57,18 @@ def loss_fn(pred, label):
     #Accuracy
     return np.sum(pred == label) / len(label)
 
+#Create cross validator
+cv = CrossValidator(X, y, loss_fn, 
+                    stratified=True, groups=(np.arange(10)+1).repeat(160),
+                    n_inner=10, n_outer=0, 
+                    n_workers=4, randomize_seed=9999, 
+                    verbose=True,)
 
 #%%
-#Create cross validator
-cv = CrossValidator(n_outer=0, n_inner=10, stratified=True, 
-                    n_workers=3, verbose = True, randomize_seed = 9999)
-
 #Define tester
 def test(models, name):
     #Cross validate
-    result = cv.cross_validate(X, y, models, loss_fn)
+    result = cv.cross_validate(models)
     
     #Save to file
     with open(f"./results/{name}.p", "wb") as file:
@@ -77,7 +79,8 @@ def test(models, name):
 
 
 #Test models
-result_name = "yz_results"
+result_name = "xyz_results"
+
 
 
 results = test([LogisticClassifier(),

@@ -26,6 +26,7 @@ class ANNClassifier(ValidationModel):
         self.lr = lr
         self.hidden_units = hidden_units
         self.DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
+        # self.DEVICE = 'cpu'
         self.printing = False
         
     def move_to(self, obj, device):
@@ -47,7 +48,9 @@ class ANNClassifier(ValidationModel):
     def train_predict(self, train_features, train_labels, test_features):
         # No. in and outputs :
         inputs = train_features.shape[1]
-        outputs = len(np.unique(train_labels))
+        # outputs = len(np.unique(train_labels))
+        #HACK: Hard-coded because project is over and I just need to test something
+        outputs = 16
 
         #Standardize features
         train_mean = train_features.mean(axis = 0)
